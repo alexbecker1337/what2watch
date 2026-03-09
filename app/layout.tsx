@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { WatchlistProvider } from "@/contexts/WatchlistContext";
 
 export const metadata: Metadata = {
   title: "What2Watch",
@@ -14,7 +15,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased min-h-screen bg-[#0d1117] text-[#f0f6fc]">
-        {children}
+        <WatchlistProvider>{children}</WatchlistProvider>
       </body>
     </html>
   );

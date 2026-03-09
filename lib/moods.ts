@@ -1,3 +1,10 @@
+export interface SubMood {
+  id: string;
+  label: string;
+  genreIds: number[]; // additional genre filter (movie)
+  tvGenreIds: number[]; // additional genre filter (tv)
+}
+
 export interface Mood {
   id: string;
   label: string;
@@ -8,6 +15,7 @@ export interface Mood {
   keywords: string;
   sortBy: string;
   color: string;
+  subMoods?: SubMood[];
 }
 
 // TMDB Genre IDs:
@@ -31,6 +39,12 @@ export const MOODS: Mood[] = [
     keywords: "uplifting,feel-good,heartwarming",
     sortBy: "popularity.desc",
     color: "from-yellow-400 to-orange-400",
+    subMoods: [
+      { id: "romantic", label: "Romantic", genreIds: [10749], tvGenreIds: [10749] },
+      { id: "family", label: "Family", genreIds: [10751], tvGenreIds: [10751] },
+      { id: "comedy", label: "Comedy", genreIds: [35], tvGenreIds: [35] },
+      { id: "music", label: "Musical", genreIds: [10402], tvGenreIds: [35] },
+    ],
   },
   {
     id: "cozy",
@@ -42,6 +56,11 @@ export const MOODS: Mood[] = [
     keywords: "cozy,small town,comfort",
     sortBy: "vote_average.desc",
     color: "from-amber-400 to-yellow-500",
+    subMoods: [
+      { id: "sitcom", label: "Sitcom", genreIds: [35], tvGenreIds: [35] },
+      { id: "animation", label: "Animated", genreIds: [16], tvGenreIds: [16] },
+      { id: "romance", label: "Romance", genreIds: [10749], tvGenreIds: [10749] },
+    ],
   },
   {
     id: "mind-bending",
@@ -53,6 +72,12 @@ export const MOODS: Mood[] = [
     keywords: "psychological,twist ending,mind bending",
     sortBy: "vote_average.desc",
     color: "from-purple-500 to-indigo-600",
+    subMoods: [
+      { id: "sci-fi", label: "Sci-Fi", genreIds: [878], tvGenreIds: [10765] },
+      { id: "mystery", label: "Mystery", genreIds: [9648], tvGenreIds: [9648] },
+      { id: "psychological", label: "Psychological", genreIds: [53, 18], tvGenreIds: [18] },
+      { id: "fantasy", label: "Fantasy", genreIds: [14], tvGenreIds: [10765] },
+    ],
   },
   {
     id: "adrenaline",
@@ -64,6 +89,12 @@ export const MOODS: Mood[] = [
     keywords: "action,chase,survival,explosive",
     sortBy: "popularity.desc",
     color: "from-red-500 to-orange-500",
+    subMoods: [
+      { id: "action", label: "Action", genreIds: [28], tvGenreIds: [10759] },
+      { id: "adventure", label: "Adventure", genreIds: [12], tvGenreIds: [10759] },
+      { id: "thriller", label: "Thriller", genreIds: [53], tvGenreIds: [80] },
+      { id: "spy", label: "Spy & Heist", genreIds: [28, 80], tvGenreIds: [80] },
+    ],
   },
   {
     id: "dark-gritty",
@@ -75,6 +106,12 @@ export const MOODS: Mood[] = [
     keywords: "dark,noir,gritty,crime",
     sortBy: "vote_average.desc",
     color: "from-gray-700 to-gray-900",
+    subMoods: [
+      { id: "crime", label: "Crime", genreIds: [80], tvGenreIds: [80] },
+      { id: "war", label: "War", genreIds: [10752], tvGenreIds: [10768] },
+      { id: "neo-noir", label: "Neo-noir", genreIds: [80, 53], tvGenreIds: [80, 18] },
+      { id: "drama", label: "Drama", genreIds: [18], tvGenreIds: [18] },
+    ],
   },
   {
     id: "laugh-out-loud",
@@ -86,6 +123,12 @@ export const MOODS: Mood[] = [
     keywords: "comedy,funny,hilarious",
     sortBy: "popularity.desc",
     color: "from-green-400 to-teal-400",
+    subMoods: [
+      { id: "slapstick", label: "Slapstick", genreIds: [35], tvGenreIds: [35] },
+      { id: "romcom", label: "Rom-Com", genreIds: [35, 10749], tvGenreIds: [35] },
+      { id: "dark-comedy", label: "Dark Comedy", genreIds: [35, 53], tvGenreIds: [35, 18] },
+      { id: "animation", label: "Animated", genreIds: [16], tvGenreIds: [16] },
+    ],
   },
   {
     id: "emotional",
@@ -97,6 +140,12 @@ export const MOODS: Mood[] = [
     keywords: "emotional,tearjerker,moving,drama",
     sortBy: "vote_average.desc",
     color: "from-blue-400 to-cyan-500",
+    subMoods: [
+      { id: "drama", label: "Drama", genreIds: [18], tvGenreIds: [18] },
+      { id: "romance", label: "Romance", genreIds: [10749], tvGenreIds: [10749] },
+      { id: "history", label: "Historical", genreIds: [36], tvGenreIds: [18] },
+      { id: "biography", label: "Biography", genreIds: [99, 18], tvGenreIds: [99] },
+    ],
   },
   {
     id: "scary",
@@ -108,5 +157,11 @@ export const MOODS: Mood[] = [
     keywords: "horror,scary,supernatural,ghost",
     sortBy: "vote_average.desc",
     color: "from-red-900 to-gray-900",
+    subMoods: [
+      { id: "supernatural", label: "Supernatural", genreIds: [27], tvGenreIds: [27] },
+      { id: "slasher", label: "Slasher", genreIds: [27, 53], tvGenreIds: [27] },
+      { id: "mystery", label: "Mystery", genreIds: [9648, 53], tvGenreIds: [9648] },
+      { id: "psychological", label: "Psychological", genreIds: [53, 18], tvGenreIds: [18] },
+    ],
   },
 ];

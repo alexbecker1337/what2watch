@@ -1,20 +1,63 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import Link from "next/link";
 import MoodPicker from "@/components/MoodPicker";
 import LikeThisSearch from "@/components/LikeThisSearch";
+import CategoryPicker from "@/components/CategoryPicker";
+import { useWatchlist } from "@/contexts/WatchlistContext";
 
-type Mode = "mood" | "like";
+type Mode = "mood" | "like" | "category";
 
 export default function Home() {
   const [mode, setMode] = useState<Mode | null>(null);
+  const { watchlistCount } = useWatchlist();
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const urlMode = params.get("mode") as Mode | null;
+    if (urlMode === "mood" || urlMode === "like" || urlMode === "category") {
+      setMode(urlMode);
+    }
+  }, []);
+
+  const handleSetMode = (newMode: Mode | null) => {
+    setMode(newMode);
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (newMode) {
+      url.searchParams.set("mode", newMode);
+    } else {
+      url.searchParams.delete("mode");
+    }
+    window.history.replaceState({}, "", url.toString());
+  };
 
   return (
     <main className="min-h-screen flex flex-col">
       {/* Header */}
       <header className="px-6 py-5 flex items-center gap-3">
         <span className="text-2xl">🎬</span>
-        <span className="text-xl font-bold tracking-tight">What2Watch</span>
+        <button
+          onClick={() => handleSetMode(null)}
+          className="text-xl font-bold tracking-tight hover:text-gray-300 transition-colors"
+        >
+          What2Watch
+        </button>
+        <div className="ml-auto">
+          <Link
+            href="/watchlist"
+            className="flex items-center gap-2 text-sm text-gray-300 hover:text-white transition-colors bg-white/5 hover:bg-white/10 px-3 py-2 rounded-lg"
+          >
+            ★ Watchlist
+            {watchlistCount > 0 && (
+              <span className="bg-yellow-500 text-black text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center leading-tight">
+                {watchlistCount}
+              </span>
+            )}
+          </Link>
+        </div>
       </header>
 
       {/* Hero */}
@@ -30,9 +73,9 @@ export default function Home() {
             Pick a mode to find your next watch.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 w-full max-w-lg">
+          <div className="flex flex-col sm:flex-row gap-4 w-full max-w-2xl">
             <button
-              onClick={() => setMode("mood")}
+              onClick={() => handleSetMode("mood")}
               className="flex-1 group relative overflow-hidden rounded-2xl bg-gradient-to-br from-purple-600 to-pink-600 p-px"
             >
               <div className="rounded-2xl bg-[#0d1117] px-6 py-8 group-hover:bg-transparent transition-all duration-300">
@@ -45,7 +88,7 @@ export default function Home() {
             </button>
 
             <button
-              onClick={() => setMode("like")}
+              onClick={() => handleSetMode("like")}
               className="flex-1 group relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-600 p-px"
             >
               <div className="rounded-2xl bg-[#0d1117] px-6 py-8 group-hover:bg-transparent transition-all duration-300">
@@ -53,6 +96,19 @@ export default function Home() {
                 <div className="text-lg font-semibold mb-1">Like This</div>
                 <div className="text-sm text-gray-400 group-hover:text-white transition-colors">
                   Pick a movie you loved
+                </div>
+              </div>
+            </button>
+
+            <button
+              onClick={() => handleSetMode("category")}
+              className="flex-1 group relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-600 to-teal-600 p-px"
+            >
+              <div className="rounded-2xl bg-[#0d1117] px-6 py-8 group-hover:bg-transparent transition-all duration-300">
+                <div className="text-4xl mb-3">🎬</div>
+                <div className="text-lg font-semibold mb-1">By Genre</div>
+                <div className="text-sm text-gray-400 group-hover:text-white transition-colors">
+                  Browse a category
                 </div>
               </div>
             </button>
@@ -64,10 +120,7 @@ export default function Home() {
       {mode === "mood" && (
         <div className="flex-1">
           <div className="px-6 py-3">
-            <button
-              onClick={() => setMode(null)}
-              className="text-sm text-gray-400 hover:text-white flex items-center gap-1 transition-colors"
-            >
+            <button onClick={() => handleSetMode(null)} className="text-sm text-gray-400 hover:text-white transition-colors">
               ← Back
             </button>
           </div>
@@ -78,14 +131,22 @@ export default function Home() {
       {mode === "like" && (
         <div className="flex-1">
           <div className="px-6 py-3">
-            <button
-              onClick={() => setMode(null)}
-              className="text-sm text-gray-400 hover:text-white flex items-center gap-1 transition-colors"
-            >
+            <button onClick={() => handleSetMode(null)} className="text-sm text-gray-400 hover:text-white transition-colors">
               ← Back
             </button>
           </div>
           <LikeThisSearch />
+        </div>
+      )}
+
+      {mode === "category" && (
+        <div className="flex-1">
+          <div className="px-6 py-3">
+            <button onClick={() => handleSetMode(null)} className="text-sm text-gray-400 hover:text-white transition-colors">
+              ← Back
+            </button>
+          </div>
+          <CategoryPicker />
         </div>
       )}
     </main>

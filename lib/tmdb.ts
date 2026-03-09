@@ -5,6 +5,37 @@ export const IMG_BASE = "https://image.tmdb.org/t/p/w500";
 export const IMG_ORIGINAL = "https://image.tmdb.org/t/p/original";
 export const BACKDROP_BASE = "https://image.tmdb.org/t/p/w1280";
 
+export const GENRE_NAMES: Record<number, string> = {
+  // Movie genres
+  28: "Action",
+  12: "Adventure",
+  16: "Animation",
+  35: "Comedy",
+  80: "Crime",
+  99: "Documentary",
+  18: "Drama",
+  10751: "Family",
+  14: "Fantasy",
+  36: "History",
+  27: "Horror",
+  10402: "Music",
+  9648: "Mystery",
+  10749: "Romance",
+  878: "Sci-Fi",
+  53: "Thriller",
+  10752: "War",
+  37: "Western",
+  // TV genres
+  10759: "Action & Adventure",
+  10762: "Kids",
+  10763: "News",
+  10764: "Reality",
+  10765: "Sci-Fi & Fantasy",
+  10766: "Soap",
+  10767: "Talk",
+  10768: "War & Politics",
+};
+
 export interface Movie {
   id: number;
   title?: string;
@@ -59,6 +90,14 @@ export interface Video {
   official: boolean;
 }
 
+export interface DiscoverFilters {
+  yearFrom?: number;
+  yearTo?: number;
+  runtimeMin?: number;
+  runtimeMax?: number;
+  withGenres?: number[];
+}
+
 async function tmdb(path: string, params: Record<string, string> = {}) {
   const pairs = [`api_key=${API_KEY}`];
   for (const [k, v] of Object.entries(params)) {
@@ -73,27 +112,37 @@ async function tmdb(path: string, params: Record<string, string> = {}) {
 export async function discoverByMood(
   genreIds: number[],
   sortBy: string,
-  page = 1
+  page = 1,
+  filters: DiscoverFilters = {}
 ) {
-  return tmdb("/discover/movie", {
-    with_genres: genreIds.join("|"),
+  const params: Record<string, string> = {
+    with_genres: (filters.withGenres ?? genreIds).join("|"),
     sort_by: sortBy,
     "vote_count.gte": "100",
     page: String(page),
-  });
+  };
+  if (filters.yearFrom) params["primary_release_date.gte"] = `${filters.yearFrom}-01-01`;
+  if (filters.yearTo) params["primary_release_date.lte"] = `${filters.yearTo}-12-31`;
+  if (filters.runtimeMin) params["with_runtime.gte"] = String(filters.runtimeMin);
+  if (filters.runtimeMax) params["with_runtime.lte"] = String(filters.runtimeMax);
+  return tmdb("/discover/movie", params);
 }
 
 export async function discoverTVByMood(
   genreIds: number[],
   sortBy: string,
-  page = 1
+  page = 1,
+  filters: DiscoverFilters = {}
 ) {
-  return tmdb("/discover/tv", {
-    with_genres: genreIds.join("|"),
+  const params: Record<string, string> = {
+    with_genres: (filters.withGenres ?? genreIds).join("|"),
     sort_by: sortBy,
     "vote_count.gte": "50",
     page: String(page),
-  });
+  };
+  if (filters.yearFrom) params["first_air_date.gte"] = `${filters.yearFrom}-01-01`;
+  if (filters.yearTo) params["first_air_date.lte"] = `${filters.yearTo}-12-31`;
+  return tmdb("/discover/tv", params);
 }
 
 export async function searchMulti(query: string) {
