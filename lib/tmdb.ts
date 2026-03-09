@@ -25,12 +25,14 @@ export interface DetailedMovie extends Movie {
 }
 
 async function tmdb(path: string, params: Record<string, string> = {}) {
-  const url = new URL(`${TMDB_BASE}${path}`);
-  url.searchParams.set("api_key", API_KEY);
+  const query = new URLSearchParams({ api_key: API_KEY });
   for (const [k, v] of Object.entries(params)) {
-    url.searchParams.set(k, v);
+    query.set(k, v);
   }
-  const res = await fetch(url.toString(), { next: { revalidate: 3600 } });
+  // Use string concat to preserve literal | for TMDB OR genre logic (URLSearchParams encodes | as %7C which TMDB rejects)
+  const qs = query.toString().replace(/with_genres=[^&]+/, `with_genres=${params.with_genres || ""}`);
+  const url = `${TMDB_BASE}${path}?${qs}`;
+  const res = await fetch(url, { next: { revalidate: 3600 } });
   if (!res.ok) throw new Error(`TMDB error: ${res.status}`);
   return res.json();
 }
