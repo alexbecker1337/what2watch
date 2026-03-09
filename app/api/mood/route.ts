@@ -16,9 +16,9 @@ export async function GET(req: NextRequest) {
   try {
     let data;
     if (mediaType === "tv") {
-      data = await discoverTVByMood(mood.tvGenres, mood.keywords, mood.sortBy, page);
+      data = await discoverTVByMood(mood.tvGenres, mood.sortBy, page);
     } else {
-      data = await discoverByMood(mood.movieGenres, mood.keywords, mood.sortBy, page);
+      data = await discoverByMood(mood.movieGenres, mood.sortBy, page);
     }
     return NextResponse.json(data);
   } catch (e) {

@@ -37,13 +37,11 @@ async function tmdb(path: string, params: Record<string, string> = {}) {
 
 export async function discoverByMood(
   genreIds: number[],
-  keywords: string,
   sortBy: string,
   page = 1
 ) {
   return tmdb("/discover/movie", {
     with_genres: genreIds.join(","),
-    with_keywords: keywords,
     sort_by: sortBy,
     "vote_count.gte": "100",
     page: String(page),
@@ -52,13 +50,11 @@ export async function discoverByMood(
 
 export async function discoverTVByMood(
   genreIds: number[],
-  keywords: string,
   sortBy: string,
   page = 1
 ) {
   return tmdb("/discover/tv", {
     with_genres: genreIds.join(","),
-    with_keywords: keywords,
     sort_by: sortBy,
     "vote_count.gte": "50",
     page: String(page),
