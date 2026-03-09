@@ -41,7 +41,7 @@ export async function discoverByMood(
   page = 1
 ) {
   return tmdb("/discover/movie", {
-    with_genres: genreIds.join(","),
+    with_genres: genreIds.join("|"),
     sort_by: sortBy,
     "vote_count.gte": "100",
     page: String(page),
@@ -54,7 +54,7 @@ export async function discoverTVByMood(
   page = 1
 ) {
   return tmdb("/discover/tv", {
-    with_genres: genreIds.join(","),
+    with_genres: genreIds.join("|"),
     sort_by: sortBy,
     "vote_count.gte": "50",
     page: String(page),
