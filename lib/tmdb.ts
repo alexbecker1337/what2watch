@@ -96,6 +96,8 @@ export interface DiscoverFilters {
   runtimeMin?: number;
   runtimeMax?: number;
   withGenres?: number[];
+  providerId?: number;
+  watchRegion?: string;
 }
 
 async function tmdb(path: string, params: Record<string, string> = {}) {
@@ -125,6 +127,8 @@ export async function discoverByMood(
   if (filters.yearTo) params["primary_release_date.lte"] = `${filters.yearTo}-12-31`;
   if (filters.runtimeMin) params["with_runtime.gte"] = String(filters.runtimeMin);
   if (filters.runtimeMax) params["with_runtime.lte"] = String(filters.runtimeMax);
+  if (filters.providerId) params["with_watch_providers"] = String(filters.providerId);
+  if (filters.watchRegion) params["watch_region"] = filters.watchRegion;
   return tmdb("/discover/movie", params);
 }
 
@@ -142,6 +146,8 @@ export async function discoverTVByMood(
   };
   if (filters.yearFrom) params["first_air_date.gte"] = `${filters.yearFrom}-01-01`;
   if (filters.yearTo) params["first_air_date.lte"] = `${filters.yearTo}-12-31`;
+  if (filters.providerId) params["with_watch_providers"] = String(filters.providerId);
+  if (filters.watchRegion) params["watch_region"] = filters.watchRegion;
   return tmdb("/discover/tv", params);
 }
 

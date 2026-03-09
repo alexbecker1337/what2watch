@@ -25,7 +25,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unknown mood" }, { status: 400 });
   }
 
-  const filters: DiscoverFilters = { yearFrom, yearTo, runtimeMin, runtimeMax };
+  // Provider filter
+  const providerId = searchParams.get("provider") ? Number(searchParams.get("provider")) : undefined;
+  const region = searchParams.get("region") || undefined;
+
+  const filters: DiscoverFilters = { yearFrom, yearTo, runtimeMin, runtimeMax, providerId, watchRegion: region };
 
   try {
     let data;

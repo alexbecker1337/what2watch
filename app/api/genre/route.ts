@@ -21,6 +21,8 @@ export async function GET(req: NextRequest) {
     yearTo: searchParams.get("yearTo") ? Number(searchParams.get("yearTo")) : undefined,
     runtimeMin: searchParams.get("runtimeMin") ? Number(searchParams.get("runtimeMin")) : undefined,
     runtimeMax: searchParams.get("runtimeMax") ? Number(searchParams.get("runtimeMax")) : undefined,
+    providerId: searchParams.get("provider") ? Number(searchParams.get("provider")) : undefined,
+    watchRegion: searchParams.get("region") || undefined,
   };
 
   if (!genreId) return NextResponse.json({ error: "Missing genre" }, { status: 400 });
@@ -38,6 +40,8 @@ export async function GET(req: NextRequest) {
     if (filters.runtimeMin) params["with_runtime.gte"] = String(filters.runtimeMin);
     if (filters.runtimeMax) params["with_runtime.lte"] = String(filters.runtimeMax);
   }
+  if (filters.providerId) params["with_watch_providers"] = String(filters.providerId);
+  if (filters.watchRegion) params["watch_region"] = filters.watchRegion;
 
   try {
     const url = tmdbUrl(`/discover/${mediaType}`, params);

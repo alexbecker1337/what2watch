@@ -2,15 +2,16 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { IMG_BASE, type Movie, GENRE_NAMES } from "@/lib/tmdb";
+import { IMG_BASE, IMG_ORIGINAL, type Movie, GENRE_NAMES, type WatchProvider } from "@/lib/tmdb";
 import { useWatchlist } from "@/contexts/WatchlistContext";
 
 interface Props {
   movie: Movie;
   seedGenreIds?: number[];
+  streamProviders?: WatchProvider[];
 }
 
-export default function MovieCard({ movie, seedGenreIds }: Props) {
+export default function MovieCard({ movie, seedGenreIds, streamProviders = [] }: Props) {
   const title = movie.title || movie.name || "Untitled";
   const year = (movie.release_date || movie.first_air_date || "").slice(0, 4);
   const rating = movie.vote_average?.toFixed(1);
@@ -58,6 +59,17 @@ export default function MovieCard({ movie, seedGenreIds }: Props) {
           {type === "tv" && (
             <div className="absolute top-2 left-2 bg-blue-600/80 backdrop-blur-sm rounded-full px-2 py-0.5 text-xs font-semibold">
               TV
+            </div>
+          )}
+
+          {/* Streaming platform logos */}
+          {streamProviders.length > 0 && (
+            <div className="absolute bottom-2 right-2 flex gap-1">
+              {streamProviders.slice(0, 3).map((p) => (
+                <div key={p.provider_id} className="relative w-5 h-5 rounded-md overflow-hidden ring-1 ring-black/40" title={p.provider_name}>
+                  <Image src={`${IMG_ORIGINAL}${p.logo_path}`} alt={p.provider_name} fill className="object-cover" sizes="20px" />
+                </div>
+              ))}
             </div>
           )}
 
