@@ -29,6 +29,8 @@ export async function GET(req: NextRequest) {
   const providerId = searchParams.get("provider") ? Number(searchParams.get("provider")) : undefined;
   const region = searchParams.get("region") || undefined;
 
+  const sortByParam = searchParams.get("sortBy") || mood.sortBy;
+
   const filters: DiscoverFilters = { yearFrom, yearTo, runtimeMin, runtimeMax, providerId, watchRegion: region };
 
   try {
@@ -37,12 +39,12 @@ export async function GET(req: NextRequest) {
       const withGenres = genreOverrideTv
         ? genreOverrideTv.split(",").map(Number).filter(Boolean)
         : undefined;
-      data = await discoverTVByMood(mood.tvGenres, mood.sortBy, page, { ...filters, withGenres });
+      data = await discoverTVByMood(mood.tvGenres, sortByParam, page, { ...filters, withGenres });
     } else {
       const withGenres = genreOverrideMovie
         ? genreOverrideMovie.split(",").map(Number).filter(Boolean)
         : undefined;
-      data = await discoverByMood(mood.movieGenres, mood.sortBy, page, { ...filters, withGenres });
+      data = await discoverByMood(mood.movieGenres, sortByParam, page, { ...filters, withGenres });
     }
     return NextResponse.json(data);
   } catch (e) {

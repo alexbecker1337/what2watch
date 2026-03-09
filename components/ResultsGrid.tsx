@@ -8,6 +8,7 @@ import { IMG_ORIGINAL, type Movie, type WatchProvider } from "@/lib/tmdb";
 
 type YearFilter = "all" | "classic" | "2000s" | "recent";
 type RuntimeFilter = "all" | "short" | "standard" | "long";
+type SortFilter = "popular" | "rating";
 
 const YEAR_RANGES: Record<YearFilter, { label: string; from?: number; to?: number }> = {
   all: { label: "All" },
@@ -19,9 +20,11 @@ const YEAR_RANGES: Record<YearFilter, { label: string; from?: number; to?: numbe
 const RUNTIME_RANGES: Record<RuntimeFilter, { label: string; min?: number; max?: number }> = {
   all: { label: "All" },
   short: { label: "Short (<90m)", max: 89 },
-  standard: { label: "Standard (90–150m)", min: 90, max: 150 },
+  standard: { label: "Standard", min: 90, max: 150 },
   long: { label: "Long (>150m)", min: 151 },
 };
+
+const PROVIDER_VISIBLE = 5;
 
 interface Props {
   fetchUrl: string;
@@ -37,31 +40,29 @@ export default function ResultsGrid({ fetchUrl, title, seedGenreIds }: Props) {
   const [mediaType, setMediaType] = useState<"movie" | "tv">("movie");
   const [yearFilter, setYearFilter] = useState<YearFilter>("all");
   const [runtimeFilter, setRuntimeFilter] = useState<RuntimeFilter>("all");
+  const [sortFilter, setSortFilter] = useState<SortFilter>("popular");
   const [copySuccess, setCopySuccess] = useState(false);
 
-  // Provider filter state
+  // Provider state
   const [availableProviders, setAvailableProviders] = useState<WatchProvider[]>([]);
   const [selectedProvider, setSelectedProvider] = useState<WatchProvider | null>(null);
   const [region, setRegion] = useState("US");
-
-  // Per-card provider data: movieId → provider logos
+  const [showAllProviders, setShowAllProviders] = useState(false);
   const [cardProviders, setCardProviders] = useState<Record<number, WatchProvider[]>>({});
 
   const sentinelRef = useRef<HTMLDivElement>(null);
   const { watched } = useWatchlist();
   const watchedSet = new Set(watched);
-
-  // Only show provider filter for discover-based URLs (not similar)
   const supportsProviderFilter = !fetchUrl.includes("/api/similar");
 
-  // Detect region from browser
+  // Detect region
   useEffect(() => {
     const lang = navigator.language || "en-US";
     const match = lang.match(/[a-z]{2}-([A-Z]{2})/);
     if (match) setRegion(match[1]);
   }, []);
 
-  // Fetch available providers for region+type
+  // Fetch available providers
   useEffect(() => {
     if (!supportsProviderFilter) return;
     fetch(`/api/providers?type=${mediaType}&region=${region}`)
@@ -70,7 +71,6 @@ export default function ResultsGrid({ fetchUrl, title, seedGenreIds }: Props) {
       .catch(() => {});
   }, [mediaType, region, supportsProviderFilter]);
 
-  // Reset provider filter when switching type
   const handleTypeSwitch = (type: "movie" | "tv") => {
     if (type === mediaType) return;
     setMediaType(type);
@@ -79,17 +79,18 @@ export default function ResultsGrid({ fetchUrl, title, seedGenreIds }: Props) {
   };
 
   const buildUrl = useCallback(
-    (p: number, type: "movie" | "tv", yr: YearFilter, rt: RuntimeFilter, provider: WatchProvider | null, reg: string) => {
+    (p: number, type: "movie" | "tv", yr: YearFilter, rt: RuntimeFilter, sort: SortFilter, provider: WatchProvider | null, reg: string) => {
       const separator = fetchUrl.includes("?") ? "&" : "?";
       let url = `${fetchUrl}${separator}page=${p}&type=${type}`;
-      const yearRange = YEAR_RANGES[yr];
-      const rtRange = RUNTIME_RANGES[rt];
-      if (yearRange.from) url += `&yearFrom=${yearRange.from}`;
-      if (yearRange.to) url += `&yearTo=${yearRange.to}`;
+      const yr_ = YEAR_RANGES[yr];
+      const rt_ = RUNTIME_RANGES[rt];
+      if (yr_.from) url += `&yearFrom=${yr_.from}`;
+      if (yr_.to) url += `&yearTo=${yr_.to}`;
       if (type === "movie") {
-        if (rtRange.min) url += `&runtimeMin=${rtRange.min}`;
-        if (rtRange.max) url += `&runtimeMax=${rtRange.max}`;
+        if (rt_.min) url += `&runtimeMin=${rt_.min}`;
+        if (rt_.max) url += `&runtimeMax=${rt_.max}`;
       }
+      url += `&sortBy=${sort === "rating" ? "vote_average.desc" : "popularity.desc"}`;
       if (provider) url += `&provider=${provider.provider_id}&region=${reg}`;
       return url;
     },
@@ -105,10 +106,10 @@ export default function ResultsGrid({ fetchUrl, title, seedGenreIds }: Props) {
   }, []);
 
   const load = useCallback(
-    async (p: number, type: "movie" | "tv", yr: YearFilter, rt: RuntimeFilter, provider: WatchProvider | null, reg: string, reset = false) => {
+    async (p: number, type: "movie" | "tv", yr: YearFilter, rt: RuntimeFilter, sort: SortFilter, provider: WatchProvider | null, reg: string, reset = false) => {
       setLoading(true);
       try {
-        const url = buildUrl(p, type, yr, rt, provider, reg);
+        const url = buildUrl(p, type, yr, rt, sort, provider, reg);
         const res = await fetch(url);
         const data = await res.json();
         const items: Movie[] = (data.results || []).map((r: Movie) => ({
@@ -117,7 +118,6 @@ export default function ResultsGrid({ fetchUrl, title, seedGenreIds }: Props) {
         }));
         setResults((prev) => (reset ? items : [...prev, ...items]));
         setTotalPages(data.total_pages || 1);
-        // Fetch provider badges in background (only when no provider filter active, since filter implies all are on that platform)
         if (!provider) fetchCardProviders(items, type, reg);
       } finally {
         setLoading(false);
@@ -129,8 +129,8 @@ export default function ResultsGrid({ fetchUrl, title, seedGenreIds }: Props) {
   useEffect(() => {
     setPage(1);
     setCardProviders({});
-    load(1, mediaType, yearFilter, runtimeFilter, selectedProvider, region, true);
-  }, [fetchUrl, mediaType, yearFilter, runtimeFilter, selectedProvider, region, load]);
+    load(1, mediaType, yearFilter, runtimeFilter, sortFilter, selectedProvider, region, true);
+  }, [fetchUrl, mediaType, yearFilter, runtimeFilter, sortFilter, selectedProvider, region, load]);
 
   // Infinite scroll
   useEffect(() => {
@@ -141,14 +141,14 @@ export default function ResultsGrid({ fetchUrl, title, seedGenreIds }: Props) {
         if (entries[0].isIntersecting && !loading && page < totalPages) {
           const next = page + 1;
           setPage(next);
-          load(next, mediaType, yearFilter, runtimeFilter, selectedProvider, region);
+          load(next, mediaType, yearFilter, runtimeFilter, sortFilter, selectedProvider, region);
         }
       },
       { rootMargin: "200px" }
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [loading, page, totalPages, mediaType, yearFilter, runtimeFilter, selectedProvider, region, load]);
+  }, [loading, page, totalPages, mediaType, yearFilter, runtimeFilter, sortFilter, selectedProvider, region, load]);
 
   const handleShare = async () => {
     try {
@@ -168,6 +168,7 @@ export default function ResultsGrid({ fetchUrl, title, seedGenreIds }: Props) {
   };
 
   const visibleResults = results.filter((m) => !watchedSet.has(m.id));
+  const visibleProviders = showAllProviders ? availableProviders : availableProviders.slice(0, PROVIDER_VISIBLE);
 
   return (
     <div className="px-4 md:px-8 pb-12">
@@ -177,21 +178,17 @@ export default function ResultsGrid({ fetchUrl, title, seedGenreIds }: Props) {
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={handleShare}
-            className="px-3 py-1.5 rounded-lg text-sm bg-white/5 hover:bg-white/10 transition-colors text-gray-300 hover:text-white flex items-center gap-1.5"
+            className="px-3 py-1.5 rounded-lg text-sm bg-white/5 hover:bg-white/10 transition-colors text-gray-300 hover:text-white"
           >
             {copySuccess ? "✓ Copied!" : "🔗 Share"}
           </button>
           <div className="flex gap-1 bg-[#161b22] rounded-lg p-1">
-            <button
-              onClick={() => handleTypeSwitch("movie")}
-              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${mediaType === "movie" ? "bg-white text-black" : "text-gray-400 hover:text-white"}`}
-            >
+            <button onClick={() => handleTypeSwitch("movie")}
+              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${mediaType === "movie" ? "bg-white text-black" : "text-gray-400 hover:text-white"}`}>
               Movies
             </button>
-            <button
-              onClick={() => handleTypeSwitch("tv")}
-              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${mediaType === "tv" ? "bg-white text-black" : "text-gray-400 hover:text-white"}`}
-            >
+            <button onClick={() => handleTypeSwitch("tv")}
+              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${mediaType === "tv" ? "bg-white text-black" : "text-gray-400 hover:text-white"}`}>
               Series
             </button>
           </div>
@@ -199,8 +196,21 @@ export default function ResultsGrid({ fetchUrl, title, seedGenreIds }: Props) {
       </div>
 
       {/* Filter bar */}
-      <div className="flex flex-wrap gap-3 mb-4">
-        {/* Year filter */}
+      <div className="flex flex-wrap gap-2 mb-6">
+        {/* Sort */}
+        <div className="flex items-center gap-1 bg-[#161b22] rounded-lg p-1 text-sm">
+          <span className="text-gray-500 px-2 text-xs">Sort:</span>
+          <button onClick={() => setSortFilter("popular")}
+            className={`px-3 py-1 rounded-md transition-colors ${sortFilter === "popular" ? "bg-white/20 text-white" : "text-gray-400 hover:text-white"}`}>
+            Popular
+          </button>
+          <button onClick={() => setSortFilter("rating")}
+            className={`px-3 py-1 rounded-md transition-colors ${sortFilter === "rating" ? "bg-white/20 text-white" : "text-gray-400 hover:text-white"}`}>
+            Top Rated
+          </button>
+        </div>
+
+        {/* Year */}
         <div className="flex items-center gap-1 bg-[#161b22] rounded-lg p-1 text-sm">
           <span className="text-gray-500 px-2 text-xs">Year:</span>
           {(Object.keys(YEAR_RANGES) as YearFilter[]).map((k) => (
@@ -211,7 +221,7 @@ export default function ResultsGrid({ fetchUrl, title, seedGenreIds }: Props) {
           ))}
         </div>
 
-        {/* Runtime filter */}
+        {/* Runtime (movies only) */}
         {mediaType === "movie" && (
           <div className="flex items-center gap-1 bg-[#161b22] rounded-lg p-1 text-sm">
             <span className="text-gray-500 px-2 text-xs">Runtime:</span>
@@ -223,44 +233,51 @@ export default function ResultsGrid({ fetchUrl, title, seedGenreIds }: Props) {
             ))}
           </div>
         )}
-      </div>
 
-      {/* Platform filter */}
-      {supportsProviderFilter && availableProviders.length > 0 && (
-        <div className="mb-6">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-xs text-gray-500">Platform:</span>
-            {selectedProvider && (
-              <button onClick={() => setSelectedProvider(null)}
-                className="text-xs text-gray-400 hover:text-white transition-colors bg-white/5 px-2 py-0.5 rounded-full">
-                Clear ✕
-              </button>
-            )}
-          </div>
-          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-            {availableProviders.map((p) => (
+        {/* Platform filter */}
+        {supportsProviderFilter && availableProviders.length > 0 && (
+          <div className="flex items-center gap-1 bg-[#161b22] rounded-lg p-1 text-sm">
+            <span className="text-gray-500 px-2 text-xs">On:</span>
+
+            {/* Provider logo buttons */}
+            {visibleProviders.map((p) => (
               <button
                 key={p.provider_id}
                 onClick={() => setSelectedProvider(selectedProvider?.provider_id === p.provider_id ? null : p)}
                 title={p.provider_name}
-                className={`flex-shrink-0 relative w-10 h-10 rounded-xl overflow-hidden transition-all ${
+                className={`relative w-7 h-7 rounded-md overflow-hidden flex-shrink-0 transition-all ${
                   selectedProvider?.provider_id === p.provider_id
-                    ? "ring-2 ring-white scale-110"
-                    : "opacity-60 hover:opacity-100"
+                    ? "ring-2 ring-white opacity-100"
+                    : "opacity-50 hover:opacity-90"
                 }`}
               >
-                <Image
-                  src={`${IMG_ORIGINAL}${p.logo_path}`}
-                  alt={p.provider_name}
-                  fill
-                  className="object-cover"
-                  sizes="40px"
-                />
+                <Image src={`${IMG_ORIGINAL}${p.logo_path}`} alt={p.provider_name} fill className="object-cover" sizes="28px" />
               </button>
             ))}
+
+            {/* See all / collapse toggle */}
+            {availableProviders.length > PROVIDER_VISIBLE && (
+              <button
+                onClick={() => setShowAllProviders((v) => !v)}
+                className="px-2 py-1 rounded-md text-gray-400 hover:text-white transition-colors whitespace-nowrap"
+              >
+                {showAllProviders ? "Less" : `+${availableProviders.length - PROVIDER_VISIBLE}`}
+              </button>
+            )}
+
+            {/* Clear active filter */}
+            {selectedProvider && (
+              <button
+                onClick={() => setSelectedProvider(null)}
+                className="px-2 py-1 rounded-md text-gray-400 hover:text-white transition-colors"
+                title="Clear platform filter"
+              >
+                ✕
+              </button>
+            )}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Grid */}
       {visibleResults.length > 0 ? (
@@ -271,11 +288,7 @@ export default function ResultsGrid({ fetchUrl, title, seedGenreIds }: Props) {
                 key={`${movie.id}-${movie.media_type}`}
                 movie={movie}
                 seedGenreIds={seedGenreIds}
-                streamProviders={
-                  selectedProvider
-                    ? [selectedProvider]
-                    : (cardProviders[movie.id] || [])
-                }
+                streamProviders={selectedProvider ? [selectedProvider] : (cardProviders[movie.id] || [])}
               />
             ))}
           </div>

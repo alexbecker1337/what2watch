@@ -27,9 +27,11 @@ export async function GET(req: NextRequest) {
 
   if (!genreId) return NextResponse.json({ error: "Missing genre" }, { status: 400 });
 
+  const sortBy = searchParams.get("sortBy") || "popularity.desc";
+
   const params: Record<string, string> = {
     with_genres: genreId,
-    sort_by: "popularity.desc",
+    sort_by: sortBy,
     "vote_count.gte": mediaType === "tv" ? "50" : "100",
     page: String(page),
   };
