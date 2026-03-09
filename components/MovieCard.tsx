@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { IMG_BASE, type Movie } from "@/lib/tmdb";
 
 interface Props {
@@ -9,10 +10,10 @@ export default function MovieCard({ movie }: Props) {
   const title = movie.title || movie.name || "Untitled";
   const year = (movie.release_date || movie.first_air_date || "").slice(0, 4);
   const rating = movie.vote_average?.toFixed(1);
-  const isTV = movie.media_type === "tv" || !!movie.name;
+  const type = movie.media_type === "tv" || (!movie.title && !!movie.name) ? "tv" : "movie";
 
   return (
-    <div className="group relative rounded-xl overflow-hidden bg-[#161b22] hover:scale-105 transition-transform duration-200 cursor-pointer">
+    <Link href={`/${type}/${movie.id}`} className="group relative rounded-xl overflow-hidden bg-[#161b22] hover:scale-105 transition-transform duration-200 block">
       {/* Poster */}
       <div className="relative aspect-[2/3] bg-gray-800">
         {movie.poster_path ? (
@@ -35,7 +36,7 @@ export default function MovieCard({ movie }: Props) {
         </div>
 
         {/* TV badge */}
-        {isTV && (
+        {type === "tv" && (
           <div className="absolute top-2 left-2 bg-blue-600/80 backdrop-blur-sm rounded-full px-2 py-0.5 text-xs font-semibold">
             TV
           </div>
@@ -52,6 +53,6 @@ export default function MovieCard({ movie }: Props) {
         <h3 className="font-semibold text-sm leading-tight line-clamp-2">{title}</h3>
         {year && <p className="text-xs text-gray-400 mt-0.5">{year}</p>}
       </div>
-    </div>
+    </Link>
   );
 }
