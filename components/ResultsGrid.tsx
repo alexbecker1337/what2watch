@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import MovieCard from "@/components/MovieCard";
 import { useWatchlist } from "@/contexts/WatchlistContext";
 import type { Movie } from "@/lib/tmdb";
@@ -37,6 +37,7 @@ export default function ResultsGrid({ fetchUrl, title, seedGenreIds }: Props) {
   const [yearFilter, setYearFilter] = useState<YearFilter>("all");
   const [runtimeFilter, setRuntimeFilter] = useState<RuntimeFilter>("all");
   const [copySuccess, setCopySuccess] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   const { watched } = useWatchlist();
   const watchedSet = new Set(watched);
@@ -91,17 +92,29 @@ export default function ResultsGrid({ fetchUrl, title, seedGenreIds }: Props) {
     load(1, mediaType, yearFilter, runtimeFilter, true);
   }, [fetchUrl, mediaType, yearFilter, runtimeFilter, load]);
 
+  // Infinite scroll
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !loading && page < totalPages) {
+          const next = page + 1;
+          setPage(next);
+          load(next, mediaType, yearFilter, runtimeFilter);
+        }
+      },
+      { rootMargin: "200px" }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [loading, page, totalPages, mediaType, yearFilter, runtimeFilter, load]);
+
   const handleTypeSwitch = (type: "movie" | "tv") => {
     if (type === mediaType) return;
     setMediaType(type);
     // reset runtime filter when switching to TV (not applicable)
     if (type === "tv") setRuntimeFilter("all");
-  };
-
-  const loadMore = () => {
-    const next = page + 1;
-    setPage(next);
-    load(next, mediaType, yearFilter, runtimeFilter);
   };
 
   const handleShare = async () => {
@@ -219,17 +232,14 @@ export default function ResultsGrid({ fetchUrl, title, seedGenreIds }: Props) {
             ))}
           </div>
 
-          {page < totalPages && (
-            <div className="mt-8 flex justify-center">
-              <button
-                onClick={loadMore}
-                disabled={loading}
-                className="px-8 py-3 rounded-full bg-white/10 hover:bg-white/20 transition-colors text-sm font-medium disabled:opacity-50"
-              >
-                {loading ? "Loading..." : "Load more"}
-              </button>
-            </div>
-          )}
+          <div ref={sentinelRef} className="mt-8 flex justify-center h-12">
+            {loading && (
+              <div className="flex items-center gap-2 text-gray-400 text-sm">
+                <div className="w-4 h-4 border-2 border-gray-600 border-t-white rounded-full animate-spin" />
+                Loading more...
+              </div>
+            )}
+          </div>
         </>
       ) : loading ? (
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
