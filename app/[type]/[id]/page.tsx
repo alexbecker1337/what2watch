@@ -1,18 +1,22 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { headers } from "next/headers";
 import {
   getDetails,
   getCredits,
   getVideos,
   getSimilar,
   getRecommendations,
+  getWatchProviders,
   IMG_BASE,
+  IMG_ORIGINAL,
   BACKDROP_BASE,
   type CastMember,
   type CrewMember,
   type Video,
   type Movie,
+  type WatchProvider,
 } from "@/lib/tmdb";
 
 interface Props {
@@ -36,12 +40,18 @@ export default async function DetailPage({ params }: Props) {
 
   if (type !== "movie" && type !== "tv") notFound();
 
-  const [details, credits, videos, similar, recs] = await Promise.all([
+  // Detect country from Accept-Language header (e.g. "de-DE,de;q=0.9" → "DE")
+  const headersList = await headers();
+  const acceptLang = headersList.get("accept-language") || "en-US";
+  const countryCode = (acceptLang.match(/[a-z]{2}-([A-Z]{2})/) || [])[1] || "US";
+
+  const [details, credits, videos, similar, recs, providers] = await Promise.all([
     getDetails(Number(id), type),
     getCredits(Number(id), type),
     getVideos(Number(id), type),
     getSimilar(Number(id), type),
     getRecommendations(Number(id), type),
+    getWatchProviders(Number(id), type),
   ]);
 
   if (!details) notFound();
@@ -72,6 +82,13 @@ export default async function DetailPage({ params }: Props) {
   ) || (videos.results || []).find(
     (v: Video) => v.site === "YouTube" && v.type === "Trailer"
   );
+
+  // Watch providers for detected country
+  const countryProviders = providers?.results?.[countryCode];
+  const streamProviders: WatchProvider[] = countryProviders?.flatrate || [];
+  const rentProviders: WatchProvider[] = countryProviders?.rent || [];
+  const buyProviders: WatchProvider[] = countryProviders?.buy || [];
+  const hasProviders = streamProviders.length > 0 || rentProviders.length > 0 || buyProviders.length > 0;
 
   // Similar — merge and dedupe
   const seen = new Set<number>([Number(id)]);
@@ -232,6 +249,70 @@ export default async function DetailPage({ params }: Props) {
             )}
           </div>
         </div>
+
+        {/* Watch Providers */}
+        {hasProviders && (
+          <div className="mb-10">
+            <div className="flex items-center gap-2 mb-4">
+              <h2 className="text-lg font-semibold">Where to Watch</h2>
+              <span className="text-xs text-gray-500 bg-white/5 px-2 py-0.5 rounded-full">{countryCode}</span>
+              {countryProviders?.link && (
+                <a href={countryProviders.link} target="_blank" rel="noopener noreferrer"
+                  className="text-xs text-gray-400 hover:text-white transition-colors ml-auto">
+                  Full list ↗
+                </a>
+              )}
+            </div>
+            <div className="flex flex-col gap-4">
+              {streamProviders.length > 0 && (
+                <div>
+                  <div className="text-xs text-gray-400 mb-2 font-medium uppercase tracking-wide">Stream</div>
+                  <div className="flex flex-wrap gap-2">
+                    {streamProviders.map((p) => (
+                      <div key={p.provider_id} className="flex items-center gap-2 bg-white/5 rounded-xl px-3 py-2">
+                        <div className="relative w-7 h-7 rounded-lg overflow-hidden flex-shrink-0">
+                          <Image src={`${IMG_ORIGINAL}${p.logo_path}`} alt={p.provider_name} fill className="object-cover" sizes="28px" />
+                        </div>
+                        <span className="text-sm font-medium">{p.provider_name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {rentProviders.length > 0 && (
+                <div>
+                  <div className="text-xs text-gray-400 mb-2 font-medium uppercase tracking-wide">Rent</div>
+                  <div className="flex flex-wrap gap-2">
+                    {rentProviders.map((p) => (
+                      <div key={p.provider_id} className="flex items-center gap-2 bg-white/5 rounded-xl px-3 py-2">
+                        <div className="relative w-7 h-7 rounded-lg overflow-hidden flex-shrink-0">
+                          <Image src={`${IMG_ORIGINAL}${p.logo_path}`} alt={p.provider_name} fill className="object-cover" sizes="28px" />
+                        </div>
+                        <span className="text-sm font-medium">{p.provider_name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {buyProviders.length > 0 && (
+                <div>
+                  <div className="text-xs text-gray-400 mb-2 font-medium uppercase tracking-wide">Buy</div>
+                  <div className="flex flex-wrap gap-2">
+                    {buyProviders.map((p) => (
+                      <div key={p.provider_id} className="flex items-center gap-2 bg-white/5 rounded-xl px-3 py-2">
+                        <div className="relative w-7 h-7 rounded-lg overflow-hidden flex-shrink-0">
+                          <Image src={`${IMG_ORIGINAL}${p.logo_path}`} alt={p.provider_name} fill className="object-cover" sizes="28px" />
+                        </div>
+                        <span className="text-sm font-medium">{p.provider_name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-gray-600 mt-3">Data provided by JustWatch via TMDB</p>
+          </div>
+        )}
 
         {/* Trailer */}
         {trailer && (

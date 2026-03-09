@@ -170,6 +170,23 @@ export async function getVideos(id: number, type: "movie" | "tv") {
   return tmdb(`/${type}/${id}/videos`);
 }
 
+export interface WatchProvider {
+  provider_id: number;
+  provider_name: string;
+  logo_path: string;
+}
+
+export interface WatchProviders {
+  link: string;
+  flatrate?: WatchProvider[];
+  rent?: WatchProvider[];
+  buy?: WatchProvider[];
+}
+
+export async function getWatchProviders(id: number, type: "movie" | "tv") {
+  return tmdb(`/${type}/${id}/watch/providers`);
+}
+
 export async function getKeywordIds(keywords: string[]): Promise<string> {
   const ids = await Promise.all(
     keywords.map(async (kw) => {

@@ -13,25 +13,28 @@ export default function Home() {
   const [mode, setMode] = useState<Mode | null>(null);
   const { watchlistCount } = useWatchlist();
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
+  const restoreModeFromUrl = () => {
     const params = new URLSearchParams(window.location.search);
     const urlMode = params.get("mode") as Mode | null;
-    if (urlMode === "mood" || urlMode === "like" || urlMode === "category") {
-      setMode(urlMode);
-    }
+    setMode(urlMode === "mood" || urlMode === "like" || urlMode === "category" ? urlMode : null);
+  };
+
+  useEffect(() => {
+    restoreModeFromUrl();
+    window.addEventListener("popstate", restoreModeFromUrl);
+    return () => window.removeEventListener("popstate", restoreModeFromUrl);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSetMode = (newMode: Mode | null) => {
     setMode(newMode);
-    if (typeof window === "undefined") return;
     const url = new URL(window.location.href);
     if (newMode) {
       url.searchParams.set("mode", newMode);
     } else {
       url.searchParams.delete("mode");
     }
-    window.history.replaceState({}, "", url.toString());
+    window.history.pushState({}, "", url.toString());
   };
 
   return (
