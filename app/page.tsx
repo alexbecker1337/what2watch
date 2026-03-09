@@ -19,7 +19,7 @@ export default function Home() {
 
       {/* Hero */}
       {!mode && (
-        <div className="flex-1 flex flex-col items-center justify-center px-4 text-center">
+        <div className="flex-1 flex flex-col items-center px-4 text-center pt-[8vh]">
           <h1 className="text-4xl md:text-6xl font-bold mb-4 leading-tight">
             What should you<br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">

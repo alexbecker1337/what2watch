@@ -85,7 +85,7 @@ export default function ResultsGrid({ fetchUrl, title }: Props) {
       {/* Grid */}
       {results.length > 0 ? (
         <>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
             {results.map((movie) => (
               <MovieCard key={`${movie.id}-${movie.media_type}`} movie={movie} />
             ))}
@@ -104,7 +104,7 @@ export default function ResultsGrid({ fetchUrl, title }: Props) {
           )}
         </>
       ) : loading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
           {Array.from({ length: 10 }).map((_, i) => (
             <div
               key={i}
