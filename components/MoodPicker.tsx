@@ -6,6 +6,7 @@ import Link from "next/link";
 import { MOODS, type Mood, type SubMood } from "@/lib/moods";
 import { IMG_BASE, type Movie } from "@/lib/tmdb";
 import ResultsGrid from "@/components/ResultsGrid";
+import StickyBreadcrumb from "@/components/StickyBreadcrumb";
 
 type SurpriseState =
   | { status: "idle" }
@@ -40,21 +41,6 @@ export default function MoodPicker() {
     } catch {
       setSurprise({ status: "idle" });
     }
-  };
-
-  // Build the fetchUrl for ResultsGrid based on selected mood + sub-mood
-  const buildFetchUrl = () => {
-    if (!selected) return "";
-    let url = `/api/mood?mood=${selected.id}`;
-    if (activeSubMood) {
-      const genreIds = activeSubMood.genreIds.join(",");
-      const tvGenreIds = activeSubMood.tvGenreIds.join(",");
-      // We pass both; the route uses `genres` param regardless of type — it'll pick the right set
-      // We encode movie genres here; ResultsGrid appends &type=tv which uses tvGenreIds if present
-      // To handle both movie and TV sub-mood genres, we pass a special param that the API resolves
-      url += `&subMoodMovieGenres=${genreIds}&subMoodTvGenres=${tvGenreIds}`;
-    }
-    return url;
   };
 
   // Surprise "ready" view
@@ -119,21 +105,17 @@ export default function MoodPicker() {
     let fetchUrl = `/api/mood?mood=${selected.id}`;
     if (activeSubMood) {
       fetchUrl += `&genres=${activeSubMood.genreIds.join(",")}`;
-      // We'll also pass TV genres — the API route resolves based on type
-      // Since ResultsGrid appends &type=..., we pass a tvGenres param too
       fetchUrl += `&tvGenres=${activeSubMood.tvGenreIds.join(",")}`;
     }
 
+    const breadcrumbLabel = `${selected.emoji} ${selected.label}${activeSubMood ? ` · ${activeSubMood.label}` : ""}`;
+
     return (
       <div>
-        <div className="px-6 mb-4 flex items-center gap-3">
-          <button
-            onClick={handleBackToMoods}
-            className="text-sm text-gray-400 hover:text-white transition-colors"
-          >
-            ← Moods
-          </button>
-          <span className="text-gray-600">/</span>
+        {/* Sticky breadcrumb */}
+        <StickyBreadcrumb label={breadcrumbLabel} onBack={handleBackToMoods} />
+
+        <div className="px-6 mb-4 flex items-center gap-3 pt-3">
           <span className="text-lg">
             {selected.emoji} {selected.label}
           </span>
@@ -170,7 +152,7 @@ export default function MoodPicker() {
 
         <ResultsGrid
           fetchUrl={fetchUrl}
-          title={`${selected.emoji} ${selected.label}${activeSubMood ? ` · ${activeSubMood.label}` : ""}`}
+          title={breadcrumbLabel}
         />
       </div>
     );

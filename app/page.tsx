@@ -5,6 +5,9 @@ import Link from "next/link";
 import MoodPicker from "@/components/MoodPicker";
 import LikeThisSearch from "@/components/LikeThisSearch";
 import CategoryPicker from "@/components/CategoryPicker";
+import HomepageSearch from "@/components/HomepageSearch";
+import RecentlyViewedRow from "@/components/RecentlyViewedRow";
+import TrendingSection from "@/components/TrendingSection";
 import { useWatchlist } from "@/contexts/WatchlistContext";
 
 type Mode = "mood" | "like" | "category";
@@ -116,6 +119,17 @@ export default function Home() {
               </div>
             </button>
           </div>
+
+          {/* Recently Viewed */}
+          <RecentlyViewedRow />
+
+          {/* Search */}
+          <HomepageSearch />
+
+          {/* Trending */}
+          <TrendingSection />
+
+          <div className="pb-16" />
         </div>
       )}
 

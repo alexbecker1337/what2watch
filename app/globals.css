@@ -18,3 +18,14 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.animate-shimmer {
+  animation: shimmer 1.5s infinite linear;
+  background: linear-gradient(to right, #161b22 0%, #1f2937 50%, #161b22 100%);
+  background-size: 200% 100%;
+}

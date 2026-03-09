@@ -50,9 +50,16 @@ export default function ResultsGrid({ fetchUrl, title, seedGenreIds }: Props) {
   const [showAllProviders, setShowAllProviders] = useState(false);
   const [cardProviders, setCardProviders] = useState<Record<number, WatchProvider[]>>({});
 
+  // Mobile filter drawer
+  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
+
+  // Random pick
+  const [highlightedId, setHighlightedId] = useState<number | null>(null);
+
   const sentinelRef = useRef<HTMLDivElement>(null);
-  const { watched } = useWatchlist();
+  const { watched, notInterested } = useWatchlist();
   const watchedSet = new Set(watched);
+  const notInterestedSet = new Set(notInterested);
   const supportsProviderFilter = !fetchUrl.includes("/api/similar");
 
   // Detect region
@@ -167,12 +174,110 @@ export default function ResultsGrid({ fetchUrl, title, seedGenreIds }: Props) {
     }
   };
 
-  const visibleResults = results.filter((m) => !watchedSet.has(m.id));
+  const handleRandomPick = () => {
+    if (visibleResults.length === 0) return;
+    const pick = visibleResults[Math.floor(Math.random() * visibleResults.length)];
+    setHighlightedId(pick.id);
+    // Scroll to card
+    setTimeout(() => {
+      const el = document.getElementById(`card-${pick.id}`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }, 50);
+    // Remove highlight after 2s
+    setTimeout(() => setHighlightedId(null), 2000);
+  };
+
+  const visibleResults = results.filter((m) => !watchedSet.has(m.id) && !notInterestedSet.has(m.id));
   const visibleProviders = showAllProviders ? availableProviders : availableProviders.slice(0, PROVIDER_VISIBLE);
+
+  // Filter panel content (shared between inline and drawer)
+  const filterPanel = (
+    <div className="flex flex-wrap gap-2">
+      {/* Sort */}
+      <div className="flex items-center gap-1 bg-[#161b22] rounded-lg p-1 text-sm">
+        <span className="text-gray-500 px-2 text-xs">Sort:</span>
+        <button onClick={() => setSortFilter("popular")}
+          className={`px-3 py-1 rounded-md transition-colors ${sortFilter === "popular" ? "bg-white/20 text-white" : "text-gray-400 hover:text-white"}`}>
+          Popular
+        </button>
+        <button onClick={() => setSortFilter("rating")}
+          className={`px-3 py-1 rounded-md transition-colors ${sortFilter === "rating" ? "bg-white/20 text-white" : "text-gray-400 hover:text-white"}`}>
+          Top Rated
+        </button>
+      </div>
+
+      {/* Year */}
+      <div className="flex items-center gap-1 bg-[#161b22] rounded-lg p-1 text-sm">
+        <span className="text-gray-500 px-2 text-xs">Year:</span>
+        {(Object.keys(YEAR_RANGES) as YearFilter[]).map((k) => (
+          <button key={k} onClick={() => setYearFilter(k)}
+            className={`px-3 py-1 rounded-md transition-colors ${yearFilter === k ? "bg-white/20 text-white" : "text-gray-400 hover:text-white"}`}>
+            {YEAR_RANGES[k].label}
+          </button>
+        ))}
+      </div>
+
+      {/* Runtime (movies only) */}
+      {mediaType === "movie" && (
+        <div className="flex items-center gap-1 bg-[#161b22] rounded-lg p-1 text-sm">
+          <span className="text-gray-500 px-2 text-xs">Runtime:</span>
+          {(Object.keys(RUNTIME_RANGES) as RuntimeFilter[]).map((k) => (
+            <button key={k} onClick={() => setRuntimeFilter(k)}
+              className={`px-3 py-1 rounded-md transition-colors ${runtimeFilter === k ? "bg-white/20 text-white" : "text-gray-400 hover:text-white"}`}>
+              {RUNTIME_RANGES[k].label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Platform filter */}
+      {supportsProviderFilter && availableProviders.length > 0 && (
+        <div className="flex items-center gap-1 bg-[#161b22] rounded-lg p-1 text-sm">
+          <span className="text-gray-500 px-2 text-xs">On:</span>
+
+          {visibleProviders.map((p) => (
+            <button
+              key={p.provider_id}
+              onClick={() => setSelectedProvider(selectedProvider?.provider_id === p.provider_id ? null : p)}
+              title={p.provider_name}
+              className={`relative w-7 h-7 rounded-md overflow-hidden flex-shrink-0 transition-all ${
+                selectedProvider?.provider_id === p.provider_id
+                  ? "ring-2 ring-white opacity-100"
+                  : "opacity-50 hover:opacity-90"
+              }`}
+            >
+              <Image src={`${IMG_ORIGINAL}${p.logo_path}`} alt={p.provider_name} fill className="object-cover" sizes="28px" />
+            </button>
+          ))}
+
+          {availableProviders.length > PROVIDER_VISIBLE && (
+            <button
+              onClick={() => setShowAllProviders((v) => !v)}
+              className="px-2 py-1 rounded-md text-gray-400 hover:text-white transition-colors whitespace-nowrap"
+            >
+              {showAllProviders ? "Less" : `+${availableProviders.length - PROVIDER_VISIBLE}`}
+            </button>
+          )}
+
+          {selectedProvider && (
+            <button
+              onClick={() => setSelectedProvider(null)}
+              className="px-2 py-1 rounded-md text-gray-400 hover:text-white transition-colors"
+              title="Clear platform filter"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div className="px-4 md:px-8 pb-12">
-      {/* Title + type toggle + share */}
+      {/* Title + type toggle + share + random */}
       <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
         <h2 className="text-xl font-bold">{title}</h2>
         <div className="flex items-center gap-2 flex-wrap">
@@ -181,6 +286,13 @@ export default function ResultsGrid({ fetchUrl, title, seedGenreIds }: Props) {
             className="px-3 py-1.5 rounded-lg text-sm bg-white/5 hover:bg-white/10 transition-colors text-gray-300 hover:text-white"
           >
             {copySuccess ? "✓ Copied!" : "🔗 Share"}
+          </button>
+          <button
+            onClick={handleRandomPick}
+            title="Random pick"
+            className="px-3 py-1.5 rounded-lg text-sm bg-white/5 hover:bg-white/10 transition-colors text-gray-300 hover:text-white"
+          >
+            🎲
           </button>
           <div className="flex gap-1 bg-[#161b22] rounded-lg p-1">
             <button onClick={() => handleTypeSwitch("movie")}
@@ -195,89 +307,129 @@ export default function ResultsGrid({ fetchUrl, title, seedGenreIds }: Props) {
         </div>
       </div>
 
-      {/* Filter bar */}
-      <div className="flex flex-wrap gap-2 mb-6">
-        {/* Sort */}
-        <div className="flex items-center gap-1 bg-[#161b22] rounded-lg p-1 text-sm">
-          <span className="text-gray-500 px-2 text-xs">Sort:</span>
-          <button onClick={() => setSortFilter("popular")}
-            className={`px-3 py-1 rounded-md transition-colors ${sortFilter === "popular" ? "bg-white/20 text-white" : "text-gray-400 hover:text-white"}`}>
-            Popular
-          </button>
-          <button onClick={() => setSortFilter("rating")}
-            className={`px-3 py-1 rounded-md transition-colors ${sortFilter === "rating" ? "bg-white/20 text-white" : "text-gray-400 hover:text-white"}`}>
-            Top Rated
-          </button>
-        </div>
+      {/* Filter bar — desktop: inline, mobile: button + drawer */}
+      {/* Desktop filter bar */}
+      <div className="hidden md:block mb-6">
+        {filterPanel}
+      </div>
 
-        {/* Year */}
-        <div className="flex items-center gap-1 bg-[#161b22] rounded-lg p-1 text-sm">
-          <span className="text-gray-500 px-2 text-xs">Year:</span>
-          {(Object.keys(YEAR_RANGES) as YearFilter[]).map((k) => (
-            <button key={k} onClick={() => setYearFilter(k)}
-              className={`px-3 py-1 rounded-md transition-colors ${yearFilter === k ? "bg-white/20 text-white" : "text-gray-400 hover:text-white"}`}>
-              {YEAR_RANGES[k].label}
-            </button>
-          ))}
-        </div>
+      {/* Mobile filter button */}
+      <div className="md:hidden mb-4">
+        <button
+          onClick={() => setFilterDrawerOpen(true)}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#161b22] text-sm text-gray-300 hover:text-white transition-colors"
+        >
+          <span>⚙ Filters</span>
+          {(sortFilter !== "popular" || yearFilter !== "all" || runtimeFilter !== "all" || selectedProvider) && (
+            <span className="bg-purple-500 text-white text-xs px-1.5 py-0.5 rounded-full">●</span>
+          )}
+        </button>
+      </div>
 
-        {/* Runtime (movies only) */}
-        {mediaType === "movie" && (
-          <div className="flex items-center gap-1 bg-[#161b22] rounded-lg p-1 text-sm">
-            <span className="text-gray-500 px-2 text-xs">Runtime:</span>
-            {(Object.keys(RUNTIME_RANGES) as RuntimeFilter[]).map((k) => (
-              <button key={k} onClick={() => setRuntimeFilter(k)}
-                className={`px-3 py-1 rounded-md transition-colors ${runtimeFilter === k ? "bg-white/20 text-white" : "text-gray-400 hover:text-white"}`}>
-                {RUNTIME_RANGES[k].label}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Platform filter */}
-        {supportsProviderFilter && availableProviders.length > 0 && (
-          <div className="flex items-center gap-1 bg-[#161b22] rounded-lg p-1 text-sm">
-            <span className="text-gray-500 px-2 text-xs">On:</span>
-
-            {/* Provider logo buttons */}
-            {visibleProviders.map((p) => (
+      {/* Mobile filter drawer overlay */}
+      {filterDrawerOpen && (
+        <div className="fixed inset-0 z-50 flex flex-col justify-end">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setFilterDrawerOpen(false)}
+          />
+          {/* Drawer */}
+          <div className="relative bg-[#0d1117] border-t border-white/10 rounded-t-2xl p-6 pb-10 z-10">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="font-semibold text-base">Filters</h3>
               <button
-                key={p.provider_id}
-                onClick={() => setSelectedProvider(selectedProvider?.provider_id === p.provider_id ? null : p)}
-                title={p.provider_name}
-                className={`relative w-7 h-7 rounded-md overflow-hidden flex-shrink-0 transition-all ${
-                  selectedProvider?.provider_id === p.provider_id
-                    ? "ring-2 ring-white opacity-100"
-                    : "opacity-50 hover:opacity-90"
-                }`}
-              >
-                <Image src={`${IMG_ORIGINAL}${p.logo_path}`} alt={p.provider_name} fill className="object-cover" sizes="28px" />
-              </button>
-            ))}
-
-            {/* See all / collapse toggle */}
-            {availableProviders.length > PROVIDER_VISIBLE && (
-              <button
-                onClick={() => setShowAllProviders((v) => !v)}
-                className="px-2 py-1 rounded-md text-gray-400 hover:text-white transition-colors whitespace-nowrap"
-              >
-                {showAllProviders ? "Less" : `+${availableProviders.length - PROVIDER_VISIBLE}`}
-              </button>
-            )}
-
-            {/* Clear active filter */}
-            {selectedProvider && (
-              <button
-                onClick={() => setSelectedProvider(null)}
-                className="px-2 py-1 rounded-md text-gray-400 hover:text-white transition-colors"
-                title="Clear platform filter"
+                onClick={() => setFilterDrawerOpen(false)}
+                className="text-gray-400 hover:text-white text-xl leading-none"
               >
                 ✕
               </button>
-            )}
+            </div>
+            <div className="flex flex-col gap-4">
+              {/* Sort */}
+              <div>
+                <div className="text-xs text-gray-500 mb-2 uppercase tracking-wide">Sort</div>
+                <div className="flex gap-2">
+                  <button onClick={() => setSortFilter("popular")}
+                    className={`px-4 py-2 rounded-lg text-sm transition-colors ${sortFilter === "popular" ? "bg-white text-black font-semibold" : "bg-white/10 text-gray-300"}`}>
+                    Popular
+                  </button>
+                  <button onClick={() => setSortFilter("rating")}
+                    className={`px-4 py-2 rounded-lg text-sm transition-colors ${sortFilter === "rating" ? "bg-white text-black font-semibold" : "bg-white/10 text-gray-300"}`}>
+                    Top Rated
+                  </button>
+                </div>
+              </div>
+
+              {/* Year */}
+              <div>
+                <div className="text-xs text-gray-500 mb-2 uppercase tracking-wide">Year</div>
+                <div className="flex flex-wrap gap-2">
+                  {(Object.keys(YEAR_RANGES) as YearFilter[]).map((k) => (
+                    <button key={k} onClick={() => setYearFilter(k)}
+                      className={`px-4 py-2 rounded-lg text-sm transition-colors ${yearFilter === k ? "bg-white text-black font-semibold" : "bg-white/10 text-gray-300"}`}>
+                      {YEAR_RANGES[k].label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Runtime */}
+              {mediaType === "movie" && (
+                <div>
+                  <div className="text-xs text-gray-500 mb-2 uppercase tracking-wide">Runtime</div>
+                  <div className="flex flex-wrap gap-2">
+                    {(Object.keys(RUNTIME_RANGES) as RuntimeFilter[]).map((k) => (
+                      <button key={k} onClick={() => setRuntimeFilter(k)}
+                        className={`px-4 py-2 rounded-lg text-sm transition-colors ${runtimeFilter === k ? "bg-white text-black font-semibold" : "bg-white/10 text-gray-300"}`}>
+                        {RUNTIME_RANGES[k].label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Platform */}
+              {supportsProviderFilter && availableProviders.length > 0 && (
+                <div>
+                  <div className="text-xs text-gray-500 mb-2 uppercase tracking-wide">Platform</div>
+                  <div className="flex flex-wrap gap-2 items-center">
+                    {availableProviders.map((p) => (
+                      <button
+                        key={p.provider_id}
+                        onClick={() => setSelectedProvider(selectedProvider?.provider_id === p.provider_id ? null : p)}
+                        title={p.provider_name}
+                        className={`relative w-9 h-9 rounded-lg overflow-hidden flex-shrink-0 transition-all ${
+                          selectedProvider?.provider_id === p.provider_id
+                            ? "ring-2 ring-white opacity-100"
+                            : "opacity-50 hover:opacity-90"
+                        }`}
+                      >
+                        <Image src={`${IMG_ORIGINAL}${p.logo_path}`} alt={p.provider_name} fill className="object-cover" sizes="36px" />
+                      </button>
+                    ))}
+                    {selectedProvider && (
+                      <button
+                        onClick={() => setSelectedProvider(null)}
+                        className="px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white bg-white/5 transition-colors"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={() => setFilterDrawerOpen(false)}
+              className="mt-6 w-full py-3 rounded-xl bg-white text-black font-semibold text-sm hover:bg-gray-200 transition-colors"
+            >
+              Apply Filters
+            </button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Grid */}
       {visibleResults.length > 0 ? (
@@ -289,6 +441,8 @@ export default function ResultsGrid({ fetchUrl, title, seedGenreIds }: Props) {
                 movie={movie}
                 seedGenreIds={seedGenreIds}
                 streamProviders={selectedProvider ? [selectedProvider] : (cardProviders[movie.id] || [])}
+                highlighted={highlightedId === movie.id}
+                cardId={`card-${movie.id}`}
               />
             ))}
           </div>
@@ -304,8 +458,23 @@ export default function ResultsGrid({ fetchUrl, title, seedGenreIds }: Props) {
       ) : loading ? (
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
           {Array.from({ length: 16 }).map((_, i) => (
-            <div key={i} className="rounded-xl bg-[#161b22] aspect-[2/3] animate-pulse" />
+            <div key={i} className="rounded-xl aspect-[2/3] animate-shimmer" />
           ))}
+        </div>
+      ) : selectedProvider !== null ? (
+        /* Empty state for provider filter */
+        <div className="text-center py-16">
+          <div className="text-4xl mb-4">📺</div>
+          <p className="text-gray-300 font-medium mb-2">
+            Nothing found on <span className="text-white">{selectedProvider.provider_name}</span> with these filters.
+          </p>
+          <p className="text-gray-500 text-sm mb-6">Try removing some filters or switching platforms.</p>
+          <button
+            onClick={() => setSelectedProvider(null)}
+            className="px-6 py-2.5 rounded-full bg-white/10 hover:bg-white/20 transition-colors text-sm font-medium"
+          >
+            Clear platform filter
+          </button>
         </div>
       ) : (
         <p className="text-gray-400 text-center py-12">No results found.</p>

@@ -18,6 +18,9 @@ import {
   type Movie,
   type WatchProvider,
 } from "@/lib/tmdb";
+import BackButton from "@/components/BackButton";
+import RecentlyViewedTracker from "@/components/RecentlyViewedTracker";
+import StarRating from "@/components/StarRating";
 
 interface Props {
   params: Promise<{ type: string; id: string }>;
@@ -101,16 +104,25 @@ export default async function DetailPage({ params }: Props) {
     if (similarMerged.length >= 10) break;
   }
 
+  // Collection
+  const collection = details.belongs_to_collection;
+
   return (
     <div className="min-h-screen">
+      {/* Recently Viewed Tracker (client component, runs useEffect) */}
+      <RecentlyViewedTracker
+        item={{
+          id: Number(id),
+          type: type as "movie" | "tv",
+          title,
+          poster_path: details.poster_path,
+          vote_average: details.vote_average ?? 0,
+        }}
+      />
+
       {/* Back */}
       <div className="absolute top-5 left-5 z-20">
-        <Link
-          href="/"
-          className="flex items-center gap-2 text-sm text-white/70 hover:text-white transition-colors bg-black/40 backdrop-blur-sm px-3 py-2 rounded-full"
-        >
-          ← Back
-        </Link>
+        <BackButton />
       </div>
 
       {/* Backdrop */}
@@ -162,14 +174,30 @@ export default async function DetailPage({ params }: Props) {
             {details.tagline && (
               <p className="text-gray-400 italic mt-1">&quot;{details.tagline}&quot;</p>
             )}
+
+            {/* Collection badge */}
+            {collection && (
+              <Link
+                href={`/collection/${collection.id}`}
+                className="inline-flex items-center gap-2 mt-3 px-3 py-1.5 rounded-full bg-purple-500/15 border border-purple-500/30 text-purple-300 text-xs font-medium hover:bg-purple-500/25 transition-colors"
+              >
+                🎬 Part of {collection.name}
+              </Link>
+            )}
           </div>
         </div>
 
         {/* Stats row */}
         <div className="flex flex-wrap gap-4 mb-8 text-sm">
-          <div className="flex items-center gap-1.5 bg-yellow-400/10 text-yellow-400 px-3 py-1.5 rounded-full font-semibold">
-            ★ {details.vote_average?.toFixed(1)}
-          </div>
+          {/* Visual star rating */}
+          {details.vote_average !== undefined && details.vote_average > 0 && (
+            <div className="bg-yellow-400/10 px-4 py-2 rounded-xl">
+              <StarRating
+                voteAverage={details.vote_average}
+                voteCount={details.vote_count}
+              />
+            </div>
+          )}
           {year && <div className="bg-white/10 px-3 py-1.5 rounded-full">{year}</div>}
           {details.runtime && (
             <div className="bg-white/10 px-3 py-1.5 rounded-full">{formatRuntime(details.runtime)}</div>

@@ -9,17 +9,21 @@ interface Props {
   movie: Movie;
   seedGenreIds?: number[];
   streamProviders?: WatchProvider[];
+  highlighted?: boolean;
+  cardId?: string;
 }
 
-export default function MovieCard({ movie, seedGenreIds, streamProviders = [] }: Props) {
+export default function MovieCard({ movie, seedGenreIds, streamProviders = [], highlighted = false, cardId }: Props) {
   const title = movie.title || movie.name || "Untitled";
   const year = (movie.release_date || movie.first_air_date || "").slice(0, 4);
   const rating = movie.vote_average?.toFixed(1);
   const type = movie.media_type === "tv" || (!movie.title && !!movie.name) ? "tv" : "movie";
 
-  const { toggleWatchlist, toggleWatched, isInWatchlist, isWatched } = useWatchlist();
+  const { toggleWatchlist, toggleWatched, toggleNotInterested, isNotInterested, setRating, ratings, isInWatchlist, isWatched } = useWatchlist();
   const inWatchlist = isInWatchlist(movie.id);
   const watched = isWatched(movie.id);
+  const hidden = isNotInterested(movie.id);
+  const currentRating = ratings[movie.id] ?? 0;
 
   // Matching genres for "Like This" mode
   const matchingGenres =
@@ -32,7 +36,10 @@ export default function MovieCard({ movie, seedGenreIds, streamProviders = [] }:
       : [];
 
   return (
-    <div className={`group relative rounded-xl overflow-hidden bg-[#161b22] transition-transform duration-200 hover:scale-105 ${watched ? "opacity-60" : ""}`}>
+    <div
+      id={cardId}
+      className={`group relative rounded-xl overflow-hidden bg-[#161b22] transition-all duration-200 hover:scale-105 ${watched ? "opacity-60" : ""} ${highlighted ? "ring-2 ring-purple-400" : ""}`}
+    >
       <Link href={`/${type}/${movie.id}`} className="block">
         {/* Poster */}
         <div className="relative aspect-[2/3] bg-gray-800">
@@ -108,7 +115,7 @@ export default function MovieCard({ movie, seedGenreIds, streamProviders = [] }:
       </Link>
 
       {/* Action buttons */}
-      <div className="flex gap-1 px-3 pb-3 pt-1">
+      <div className="flex gap-1 px-3 pb-1 pt-1">
         <button
           onClick={(e) => {
             e.preventDefault();
@@ -137,7 +144,42 @@ export default function MovieCard({ movie, seedGenreIds, streamProviders = [] }:
         >
           {watched ? "✓ Watched" : "○ Watched"}
         </button>
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            toggleNotInterested(movie.id);
+          }}
+          title={hidden ? "Unhide" : "Not interested"}
+          className={`flex-1 text-xs py-1 rounded-md transition-colors font-medium ${
+            hidden
+              ? "bg-red-500/20 text-red-400 hover:bg-red-500/30"
+              : "bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white"
+          }`}
+        >
+          {hidden ? "↩ Unhide" : "✕ Hide"}
+        </button>
       </div>
+
+      {/* Star rating row — only when watched */}
+      {watched && (
+        <div className="flex items-center justify-center gap-0.5 px-3 pb-3 pt-1">
+          {[1, 2, 3, 4, 5].map((star) => (
+            <button
+              key={star}
+              onClick={(e) => {
+                e.preventDefault();
+                setRating(movie.id, star);
+              }}
+              title={`Rate ${star} star${star > 1 ? "s" : ""}`}
+              className="text-sm transition-colors"
+            >
+              <span className={currentRating >= star ? "text-yellow-400" : "text-gray-600"}>
+                {currentRating >= star ? "★" : "☆"}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

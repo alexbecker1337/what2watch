@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import ResultsGrid from "@/components/ResultsGrid";
+import StickyBreadcrumb from "@/components/StickyBreadcrumb";
 
 interface Genre {
   id: number;
@@ -45,23 +46,21 @@ export default function CategoryPicker() {
 
   if (selected) {
     const genreId = selected.subGenreId ?? selected.genre.id;
+    const breadcrumbLabel = `${selected.genre.emoji} ${selected.genre.label}`;
+
     return (
       <div>
-        <div className="px-6 mb-6 flex items-center gap-3 flex-wrap">
-          <button
-            onClick={() => setSelected(null)}
-            className="text-sm text-gray-400 hover:text-white transition-colors"
-          >
-            ← Genres
-          </button>
-          <span className="text-gray-600">/</span>
+        {/* Sticky breadcrumb */}
+        <StickyBreadcrumb label={breadcrumbLabel} onBack={() => setSelected(null)} />
+
+        <div className="px-6 mb-6 flex items-center gap-3 flex-wrap pt-3">
           <span className="text-lg">
             {selected.genre.emoji} {selected.genre.label}
           </span>
         </div>
         <ResultsGrid
           fetchUrl={`/api/genre?genre=${genreId}`}
-          title={`${selected.genre.emoji} ${selected.genre.label}`}
+          title={breadcrumbLabel}
         />
       </div>
     );

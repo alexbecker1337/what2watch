@@ -61,8 +61,10 @@ export interface DetailedMovie extends Movie {
   production_countries?: { name: string }[];
   budget?: number;
   revenue?: number;
+  vote_count?: number;
   created_by?: { name: string; profile_path: string | null }[];
   networks?: { name: string; logo_path: string | null }[];
+  belongs_to_collection?: { id: number; name: string; poster_path: string | null } | null;
 }
 
 export interface CastMember {
